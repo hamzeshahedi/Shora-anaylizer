@@ -1,34 +1,42 @@
-
 import streamlit as st
+import re
 
-# تنظیم فونت فارسی با CSS
-st.markdown("""
-    <style>
-    @font-face {
-      font-family: 'Vazir';
-      src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font/dist/Vazir.woff2') format('woff2');
-    }
-    html, body, [class*="css"]  {
-      font-family: 'Vazir', sans-serif;
-    }
-    </style>
-""", unsafe_allow_html=True)
+# خواندن فایل قوانین از ریشه پروژه
+def load_laws():
+    try:
+        with open("sample_laws.txt", "r", encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        return "فایل قوانین یافت نشد. لطفاً sample_laws.txt را در ریشه پروژه قرار دهید."
 
-# عنوان و توضیحات
-st.title("بررسی انطباق مصوبات شورای اسلامی با قوانین")
-st.write("لطفاً مصوبه مورد نظر را وارد کرده یا فایل آن را بارگذاری نمایید:")
+# تطبیق هر خط از مصوبه با قوانین
+def analyze_resolution(resolution, laws):
+    results = []
+    for line in resolution.split("\n"):
+        if not line.strip():
+            continue
+        match = re.search(re.escape(line.strip()), laws)
+        if match:
+            results.append(f"✔️ انطباق یافت: {line}")
+        else:
+            results.append(f"❌ مغایرت یا عدم انطباق: {line}")
+    return results
 
-# فرم ورودی
-uploaded_file = st.file_uploader("فایل مصوبه (PDF, JPG, PNG)", type=["pdf", "jpg", "jpeg", "png"])
-text_input = st.text_area("یا متن مصوبه را اینجا وارد کنید")
+# رابط کاربری استریم‌لیت
+st.title("تحلیل هوشمند مصوبات شورا با قوانین بالادستی")
 
-# دکمه ارسال
-if st.button("تحلیل کن"):
-    if uploaded_file:
-        st.success("فایل با موفقیت بارگذاری شد. تحلیل در حال انجام است...")
-        # اینجا منطق تحلیل فایل را اضافه کنید
-    elif text_input.strip():
-        st.success("متن دریافت شد. تحلیل در حال انجام است...")
-        # اینجا منطق تحلیل متن را اضافه کنید
+laws_text = load_laws()
+
+st.write("متن قوانین بارگذاری شده:")
+st.write(laws_text[:500])  # نمایش اولین 500 کاراکتر از قوانین برای بررسی
+
+resolution_input = st.text_area("متن مصوبه را وارد کنید (هر خط جداگانه بررسی می‌شود):", height=300)
+
+if st.button("تحلیل مصوبه"):
+    if not resolution_input.strip():
+        st.warning("لطفاً ابتدا یک متن مصوبه وارد کنید.")
     else:
-        st.error("لطفاً یک فایل انتخاب کنید یا متن وارد نمایید.")
+        st.info("در حال تحلیل مصوبه...")
+        analysis = analyze_resolution(resolution_input, laws_text)
+        for result in analysis:
+            st.write(result)
