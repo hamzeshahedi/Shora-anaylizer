@@ -1,35 +1,48 @@
 import streamlit as st
 from transformers import pipeline
-from huggingface_hub import login
+import pdfplumber
+import tempfile
+import os
 
-# وارد کردن توکن Hugging Face
-login(token="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")
+# مدل پیش‌فرض برای تحلیل متون فارسی
+@st.cache_resource
+def load_model():
+    return pipeline("zero-shot-classification",
+                    model="HooshvareLab/bert-fa-base-uncased-clf")
 
-# استفاده از مدل Hugging Face parsBERT برای تجزیه مفهومی متن (مدل عمومی)
-nlp = pipeline("zero-shot-classification", model="HooshvareLab/bert-fa-base-uncased")
+nlp = load_model()
 
-# این تابع برای تجزیه متن به مفاهیم مختلف و شناسایی موضوعات استفاده می‌شود.
-def analyze_concepts(text):
-    categories = ["افتتاح حساب", "تصویب بودجه", "پروژه‌های عمرانی", "آیین‌نامه", "قوانین شهرداری"]
-    results = nlp(text, candidate_labels=categories)
-    return results
+# تابع برای استخراج متن از PDF
+def extract_text_from_pdf(pdf_file):
+    text = ""
+    with pdfplumber.open(pdf_file) as pdf:
+        for page in pdf.pages:
+            text += page.extract_text() + "\n"
+    return text
 
-# رابط کاربری Streamlit
-st.title("تحلیل هوشمند مصوبات شورا با تحلیل مفهومی")
+# رابط کاربری
+st.set_page_config(page_title="تحلیل مصوبات شورا", layout="wide")
+st.title("تحلیل مصوبات شورای اسلامی")
 
-st.write("لطفاً مصوبه را وارد کنید تا تحلیل مفهومی و تطبیقی انجام شود:")
+uploaded_file = st.file_uploader("فایل مصوبه را بارگذاری کنید (PDF یا تایپ دستی)", type=["pdf"])
+manual_text = st.text_area("یا متن مصوبه را اینجا وارد کنید:", height=300)
 
-# ورودی مصوبه از کاربر
-resolution_input = st.text_area("متن مصوبه را وارد کنید:", height=300)
-
-if st.button("تحلیل مصوبه"):
-    if not resolution_input.strip():
-        st.warning("لطفاً یک متن مصوبه وارد کنید.")
+if uploaded_file or manual_text:
+    st.subheader("نتایج تحلیل")
+    
+    if uploaded_file:
+        with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+            tmp_file.write(uploaded_file.read())
+            text = extract_text_from_pdf(tmp_file.name)
+            os.unlink(tmp_file.name)
     else:
-        st.info("در حال تحلیل مصوبه...")
-        
-        # تحلیل مفهومی مصوبه
-        concepts = analyze_concepts(resolution_input)
-        st.write("**نتایج تحلیل مفهومی:**")
-        st.write(f"موضوع اصلی: {concepts['labels'][0]}")
-        st.write(f"اعتماد مدل به این تحلیل: {concepts['scores'][0] * 100:.2f}%")
+        text = manual_text
+
+    candidate_labels = ["مغایرت با قوانین بالادستی", "مطابقت با قوانین", "نیاز به بررسی بیشتر"]
+    
+    for i, line in enumerate(text.split("\n")):
+        if line.strip():
+            result = nlp(line, candidate_labels)
+            st.markdown(f"**{i+1}. {line.strip()}**")
+            st.write({label: f"{score:.2f}" for label, score in zip(result['labels'], result['scores'])})
+            st.markdown("---")
