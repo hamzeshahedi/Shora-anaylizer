@@ -1,44 +1,32 @@
+
 import streamlit as st
-import os
+from transformers import pipeline
 
-# بررسی اینکه فایل قوانین واقعاً وجود داره یا نه
-def load_laws():
-    if os.path.exists("sample_laws.txt"):
-        with open("sample_laws.txt", "r", encoding="utf-8") as f:
-            return f.read()
-    else:
-        return None
+# استفاده از مدل Hugging Face parsBERT برای تجزیه مفهومی متن
+nlp = pipeline("zero-shot-classification", model="HooshvareLab/bert-fa-base-uncased-clf")
 
-# بررسی ساده هر خط مصوبه
-def analyze_resolution(resolution, laws):
-    results = []
-    for line in resolution.split("\n"):
-        if line.strip() == "":
-            continue
-        if line.strip() in laws:
-            results.append(f"✔️ انطباق یافت: {line}")
-        else:
-            results.append(f"❌ مغایرت یا عدم انطباق: {line}")
+# این تابع برای تجزیه متن به مفاهیم مختلف و شناسایی موضوعات استفاده می‌شود.
+def analyze_concepts(text):
+    categories = ["افتتاح حساب", "تصویب بودجه", "پروژه‌های عمرانی", "آیین‌نامه", "قوانین شهرداری"]
+    results = nlp(text, candidate_labels=categories)
     return results
 
-# UI
-st.title("تحلیل مصوبات با قوانین بالادستی")
+# رابط کاربری Streamlit
+st.title("تحلیل هوشمند مصوبات شورا با تحلیل مفهومی")
 
-laws_text = load_laws()
+st.write("لطفاً مصوبه را وارد کنید تا تحلیل مفهومی و تطبیقی انجام شود:")
 
-if laws_text is None:
-    st.error("فایل قوانین (sample_laws.txt) پیدا نشد. لطفاً آن را در ریشه پروژه قرار دهید.")
-else:
-    st.success("فایل قوانین با موفقیت بارگذاری شد.")
+# ورودی مصوبه از کاربر
+resolution_input = st.text_area("متن مصوبه را وارد کنید:", height=300)
 
-    resolution_input = st.text_area("متن مصوبه را وارد کنید (هر خط جداگانه بررسی می‌شود):")
-
-    if st.button("تحلیل مصوبه"):
-        if not resolution_input.strip():
-            st.warning("لطفاً یک متن مصوبه وارد کنید.")
-        else:
-            st.info("در حال تحلیل مصوبه...")
-            result = analyze_resolution(resolution_input, laws_text)
-            st.write("**نتایج:**")
-            for line in result:
-                st.write(line)
+if st.button("تحلیل مصوبه"):
+    if not resolution_input.strip():
+        st.warning("لطفاً یک متن مصوبه وارد کنید.")
+    else:
+        st.info("در حال تحلیل مصوبه...")
+        
+        # تحلیل مفهومی مصوبه
+        concepts = analyze_concepts(resolution_input)
+        st.write("**نتایج تحلیل مفهومی:**")
+        st.write(f"موضوع اصلی: {concepts['labels'][0]}")
+        st.write(f"اعتماد مدل به این تحلیل: {concepts['scores'][0] * 100:.2f}%")
