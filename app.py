@@ -5,8 +5,8 @@ from huggingface_hub import login
 # وارد کردن توکن Hugging Face
 login(token="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")
 
-# استفاده از مدل Hugging Face parsBERT برای تجزیه مفهومی متن
-nlp = pipeline("zero-shot-classification", model="HooshvareLab/bert-fa-base-uncased-clf")
+# استفاده از مدل Hugging Face parsBERT برای تجزیه مفهومی متن (مدل عمومی)
+nlp = pipeline("zero-shot-classification", model="HooshvareLab/bert-fa-base-uncased")
 
 # این تابع برای تجزیه متن به مفاهیم مختلف و شناسایی موضوعات استفاده می‌شود.
 def analyze_concepts(text):
