@@ -1,3 +1,4 @@
 streamlit
 PyMuPDF
 pytesseract
+transformers
