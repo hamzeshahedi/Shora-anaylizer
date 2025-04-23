@@ -1,4 +1,6 @@
 import streamlit as st
+st.set_page_config(page_title="تحلیل مصوبات شورا", layout="wide")  # این خط باید اولین دستور باشه
+
 from transformers import pipeline
 import pdfplumber
 import tempfile
@@ -8,7 +10,7 @@ import os
 @st.cache_resource
 def load_model():
     return pipeline("zero-shot-classification",
-                    model="facebook/bart-large-mnli")  # مدل عمومی و رایگان
+                    model="facebook/bart-large-mnli")  # مدل رایگان و در دسترس
 
 nlp = load_model()
 
@@ -17,11 +19,10 @@ def extract_text_from_pdf(pdf_file):
     text = ""
     with pdfplumber.open(pdf_file) as pdf:
         for page in pdf.pages:
-            text += page.extract_text() + "\n"  # این خط اصلاح شد
+            text += page.extract_text() + "\n"
     return text
 
 # رابط کاربری
-st.set_page_config(page_title="تحلیل مصوبات شورا", layout="wide")
 st.title("تحلیل مصوبات شورای اسلامی")
 
 uploaded_file = st.file_uploader("فایل مصوبه را بارگذاری کنید (PDF یا تایپ دستی)", type=["pdf"])
@@ -40,7 +41,7 @@ if uploaded_file or manual_text:
 
     candidate_labels = ["مغایرت با قوانین بالادستی", "مطابقت با قوانین", "نیاز به بررسی بیشتر"]
     
-    for i, line in enumerate(text.split("\n")):  # این خط اصلاح شد
+    for i, line in enumerate(text.split("\n")):
         if line.strip():
             result = nlp(line, candidate_labels)
             st.markdown(f"**{i+1}. {line.strip()}**")
