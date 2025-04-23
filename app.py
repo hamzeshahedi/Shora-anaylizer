@@ -7,8 +7,7 @@ import os
 # مدل پیش‌فرض برای تحلیل متون فارسی
 @st.cache_resource
 def load_model():
-    return pipeline("zero-shot-classification",
-                    model="HooshvareLab/bert-fa-base-uncased-clf")
+    return pipeline("zero-shot-classification", model="bert-base-multilingual-cased")
 
 nlp = load_model()
 
@@ -40,10 +39,9 @@ if uploaded_file or manual_text:
 
     candidate_labels = ["مغایرت با قوانین بالادستی", "مطابقت با قوانین", "نیاز به بررسی بیشتر"]
     
-    if st.button("تحلیل مصوبه"):
-        for i, line in enumerate(text.split("\n")):
-            if line.strip():
-                result = nlp(line, candidate_labels)
-                st.markdown(f"**{i+1}. {line.strip()}**")
-                st.write({label: f"{score:.2f}" for label, score in zip(result['labels'], result['scores'])})
-                st.markdown("---")
+    for i, line in enumerate(text.split("\n")):
+        if line.strip():
+            result = nlp(line, candidate_labels)
+            st.markdown(f"**{i+1}. {line.strip()}**")
+            st.write({label: f"{score:.2f}" for label, score in zip(result['labels'], result['scores'])})
+            st.markdown("---")
