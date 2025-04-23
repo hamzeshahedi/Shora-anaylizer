@@ -1,47 +1,46 @@
 import streamlit as st
-from transformers import pipeline
 import pdfplumber
-import tempfile
-import os
+import re
+from transformers import pipeline
 
-# مدل پیش‌فرض برای تحلیل متون فارسی
-@st.cache_resource
-def load_model():
-    return pipeline("zero-shot-classification", model="bert-base-multilingual-cased")
+st.set_page_config(page_title="تحلیل مصوبات شورا", page_icon="✅", layout="wide")
 
-nlp = load_model()
+st.title("سامانه تحلیل مصوبات شورا")
 
-# تابع برای استخراج متن از PDF
-def extract_text_from_pdf(pdf_file):
-    text = ""
-    with pdfplumber.open(pdf_file) as pdf:
+uploaded_file = st.file_uploader("لطفاً فایل PDF مصوبه را بارگذاری کنید", type="pdf")
+
+if uploaded_file is not None:
+    with pdfplumber.open(uploaded_file) as pdf:
+        text = ""
         for page in pdf.pages:
             text += page.extract_text() + "\n"
-    return text
 
-# رابط کاربری
-st.set_page_config(page_title="تحلیل مصوبات شورا", layout="wide")
-st.title("تحلیل مصوبات شورای اسلامی")
+    st.subheader("متن کامل مصوبه:")
+    st.write(text)
 
-uploaded_file = st.file_uploader("فایل مصوبه را بارگذاری کنید (PDF یا تایپ دستی)", type=["pdf"])
-manual_text = st.text_area("یا متن مصوبه را اینجا وارد کنید:", height=300)
+    # استخراج بندهای مصوبه با regex
+    st.subheader("بندهای استخراج‌شده:")
+    bands = re.findall(r'(?<=\n)[\d۰-۹]+\.?\s+[^\n]+', text)
+    for i, band in enumerate(bands, 1):
+        st.markdown(f"**{i}. {band}**")
 
-if uploaded_file or manual_text:
-    st.subheader("نتایج تحلیل")
-    
-    if uploaded_file:
-        with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
-            tmp_file.write(uploaded_file.read())
-            text = extract_text_from_pdf(tmp_file.name)
-            os.unlink(tmp_file.name)
-    else:
-        text = manual_text
+    # تحلیل مفهومی با مدل transformer
+    classifier = pipeline("zero-shot-classification", model="Morwared/HerBERT-fa-zsc")
 
-    candidate_labels = ["مغایرت با قوانین بالادستی", "مطابقت با قوانین", "نیاز به بررسی بیشتر"]
-    
-    for i, line in enumerate(text.split("\n")):
-        if line.strip():
-            result = nlp(line, candidate_labels)
-            st.markdown(f"**{i+1}. {line.strip()}**")
-            st.write({label: f"{score:.2f}" for label, score in zip(result['labels'], result['scores'])})
-            st.markdown("---")
+    candidate_labels = [
+        "قانون مالیات‌ها",
+        "قانون شهرداری‌ها",
+        "آیین‌نامه معاملات شهرداری",
+        "برنامه توسعه شهری",
+        "مصوبات شورای عالی استان‌ها",
+        "مقررات ملی ساختمان"
+    ]
+
+    st.subheader("تحلیل هر بند نسبت به قوانین بالادستی:")
+    for band in bands:
+        result = classifier(band, candidate_labels)
+        st.markdown(f"**بند:** {band}")
+        st.markdown("**تحلیل:**")
+        for label, score in zip(result['labels'], result['scores']):
+            st.write(f"{label}: {round(score * 100, 2)}%")
+        st.markdown("---")
