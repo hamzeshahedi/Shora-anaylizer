@@ -1,3 +1,4 @@
+
 import streamlit as st
 from transformers import pipeline
 import pdfplumber
@@ -17,7 +18,8 @@ def extract_text_from_pdf(pdf_file):
     text = ""
     with pdfplumber.open(pdf_file) as pdf:
         for page in pdf.pages:
-            text += page.extract_text() + "\n"
+            text += page.extract_text() + "
+"
     return text
 
 # رابط کاربری
@@ -40,7 +42,8 @@ if uploaded_file or manual_text:
 
     candidate_labels = ["مغایرت با قوانین بالادستی", "مطابقت با قوانین", "نیاز به بررسی بیشتر"]
     
-    for i, line in enumerate(text.split("\n")):
+    for i, line in enumerate(text.split("
+")):
         if line.strip():
             result = nlp(line, candidate_labels)
             st.markdown(f"**{i+1}. {line.strip()}**")
