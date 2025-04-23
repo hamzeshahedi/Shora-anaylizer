@@ -4,11 +4,11 @@ import pdfplumber
 import tempfile
 import os
 
-# مدل پیش‌فرض برای تحلیل متون فارسی
+# مدل پیش‌فرض برای تحلیل متون
 @st.cache_resource
 def load_model():
     return pipeline("zero-shot-classification",
-                    model="HooshvareLab/bert-fa-base-uncased-clf")
+                    model="facebook/bart-large-mnli")  # مدل عمومی و رایگان
 
 nlp = load_model()
 
